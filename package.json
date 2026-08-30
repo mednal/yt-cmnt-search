@@ -1,0 +1,24 @@
+{
+  "name": "youtube-comment-ai",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Search YouTube comments by keyword and by meaning.",
+  "workspaces": [
+    "packages/shared",
+    "packages/backend",
+    "packages/extension"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

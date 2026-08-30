@@ -1,0 +1,15 @@
+{
+  "name": "@yca/backend",
+  "version": "0.0.0",
+  "private": true,
+  "description": "NestJS API: comment ingestion, embedding, keyword and semantic search.",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@yca/shared": "*"
+  }
+}

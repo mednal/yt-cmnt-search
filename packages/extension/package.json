@@ -1,0 +1,14 @@
+{
+  "name": "@yca/extension",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Chrome MV3 side panel for searching the current video's comments.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@yca/shared": "*"
+  }
+}

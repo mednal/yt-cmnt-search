@@ -1,0 +1,16 @@
+{
+  "name": "@yca/shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Types shared by the backend API and the Chrome extension.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+  }
+}
