@@ -1,6 +1,6 @@
 # YouTube Comment AI — Implementation Plan
 
-Status: **approved — M0 in progress**
+Status: **M0, M1, M2 complete — M3 next**
 Last updated: 2026-08-31
 
 ---
