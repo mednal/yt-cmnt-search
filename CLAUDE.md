@@ -18,7 +18,7 @@ User searches:
 "people complaining about installation"
 
 The application should find comments such as:
-
+s   
 "Anyone else getting an error while installing this?"
 
 even though the exact words "complaining about installation" do not appear.

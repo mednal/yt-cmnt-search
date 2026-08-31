@@ -1,0 +1,25 @@
+# Local development database.
+#
+# Host port 5433 (not 5432) so this container coexists with any Postgres
+# already installed on the machine. DATABASE_URL in .env must match.
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: yca-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: youtube_comment_ai
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d youtube_comment_ai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
