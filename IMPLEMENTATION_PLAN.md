@@ -1,7 +1,7 @@
 # YouTube Comment AI — Implementation Plan
 
-Status: **M0, M1, M2 complete — M3 next**
-Last updated: 2026-08-31
+Status: **M0–M4 complete — M5 next**
+Last updated: 2026-09-02
 
 ---
 

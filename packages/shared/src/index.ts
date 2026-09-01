@@ -1,8 +1,8 @@
 /**
  * Types shared by the backend and the extension.
  *
- * These are the API request/response contracts (M3: ingestion status; M4:
- * search lands here next).
+ * These are the API request/response contracts (M3: ingestion status;
+ * M4: search).
  */
 
 /** Lifecycle of one asynchronous, resumable job step (ingest or embed). */
@@ -26,4 +26,42 @@ export interface IngestStepResponse {
   commentCount: number;
   /** `true` once every comment page has been fetched. */
   done: boolean;
+}
+
+/**
+ * How a search query is matched.
+ *
+ * `keyword` is Postgres full-text matching; `semantic` compares embeddings
+ * (M6) and only covers comments embedded so far.
+ */
+export type SearchMode = 'keyword' | 'semantic';
+
+/** One matching comment. */
+export interface SearchResultItem {
+  /** YouTube's own comment id — what M9 uses to jump to the comment. */
+  youtubeCommentId: string;
+  author: string;
+  text: string;
+  likeCount: number;
+  publishedAt: string | null;
+  /** `null` for a top-level comment, the thread's id for a reply. */
+  parentCommentId: string | null;
+  /**
+   * Relevance, higher is better: `ts_rank` in keyword mode, cosine
+   * similarity in semantic mode. Comparable within a response, not across
+   * modes.
+   */
+  score: number;
+}
+
+/** `GET /videos/:videoId/search` — one page of ranked results. */
+export interface SearchResponse {
+  videoId: string;
+  query: string;
+  mode: SearchMode;
+  /** Total matches for the query, not just those on this page. */
+  total: number;
+  limit: number;
+  offset: number;
+  results: SearchResultItem[];
 }
