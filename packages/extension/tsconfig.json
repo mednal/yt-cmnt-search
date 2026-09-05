@@ -4,8 +4,11 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "outDir": "dist",
-    "rootDir": "src",
+    "types": ["chrome", "node"],
+    // esbuild emits the bundles (scripts/build.mjs); tsc only typechecks, so
+    // imports can carry the .ts extension that Node's test runner needs.
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
     "declaration": false,
     "declarationMap": false
   },

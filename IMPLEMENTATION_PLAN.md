@@ -1,6 +1,6 @@
 # YouTube Comment AI — Implementation Plan
 
-Status: **M0–M6 complete — M7 next**
+Status: **M0–M8 complete — M9 next**
 Last updated: 2026-09-05
 
 ---
@@ -136,13 +136,57 @@ Embed the query, `ORDER BY embedding <=> $1` (cosine), return similarity. `mode=
 - **Query preparation matches the write side.** The query is trimmed and capped at `MAX_EMBEDDING_INPUT_CHARS` exactly as comments were, so both sides of the comparison went through the same pipeline. A provider failure maps to 502, as in the embed pipeline: an upstream dependency failed, not a bad request.
 - **`toVectorLiteral` moved to the database layer.** Both the write side (embedding pipeline) and the read side (semantic search) need pgvector's text literal encoding, and it belongs to neither.
 
-### M7 — Extension shell
+### M7 — Extension shell ✅
 MV3 `manifest.json`, service worker opening the side panel on action click, content script detecting the video ID (including SPA navigation via `yt-navigate-finish`), panel showing the detected video and its job status. esbuild build script.
 **Done when:** loading unpacked on a watch page opens a panel showing the correct video ID, updating across navigations.
+**Verified:** `npm run build` produces a loadable `packages/extension/dist` (three IIFE bundles + manifest/html/css, ~11kb total, 39ms); `npm test` covers the id parser (9 cases: watch/shorts/live/embed/youtu.be, subdomains, look-alike hosts, malformed ids); the backend answers the panel's two calls from a `chrome-extension://` origin (`Access-Control-Allow-Origin: *` on `/health`, `/videos/:id/status` returning the stored 2709-comment job). Loading unpacked in Chrome is a manual step — see below.
 
-### M8 — Search UI
+**Structure**
+
+```
+packages/extension/
+├─ public/       manifest.json · sidepanel.html · sidepanel.css   (copied verbatim)
+├─ scripts/build.mjs                                              (esbuild + static copy)
+└─ src/
+   ├─ video-id.ts (+ .test.ts)   pure URL → video id
+   ├─ messaging.ts               every chrome.runtime payload, in one place
+   ├─ config.ts                  build-time API base URL
+   ├─ background/service-worker.ts
+   ├─ content/content-script.ts
+   └─ sidepanel/{sidepanel,api}.ts
+```
+
+**Decisions taken here**
+
+- **The service worker owns "which video", not the panel.** The panel is one context among several and is closed most of the time; the worker resolves the active tab, and the panel only renders what it is told. Tab → video id lives in `chrome.storage.session`, because MV3 kills the worker between events and module scope does not survive it.
+- **Content script *and* URL parsing, deliberately.** `tab.url` alone would technically answer the question, but the content script reports on `yt-navigate-finish` — the event YouTube's own SPA fires — so the panel updates promptly on in-page navigation; the worker's `parseVideoId(tab.url)` is the fallback for a cold worker, a tab open since before install, or a page where injection failed. The content script is also where M9's jump-to-comment lands.
+- **The backend origin is a build-time constant.** It has to agree in two places — the panel's `fetch` and the manifest's `host_permissions` — and a mismatch surfaces as an opaque network error. `scripts/build.mjs` defines `__API_BASE_URL__` and substitutes `__API_ORIGIN__` in the manifest from one value: `YCA_API_BASE_URL` (default `http://localhost:3000`). The checked-in `public/manifest.json` is a template; `dist/manifest.json` is what Chrome loads.
+- **`app.enableCors()` on the backend.** MV3 host permissions normally exempt extension-page fetches from CORS, but relying on that makes an unexplainable failure mode for one line of dev-server config.
+- **`tsc` typechecks, esbuild builds.** The extension emits nothing through `tsc` (`noEmit`), which lets imports carry the `.ts` extension Node's test runner needs, so `parseVideoId` is unit-tested by `node --test` with no test framework in the extension. This raises the repo's Node floor to 22.6 (native TS stripping) — root `engines` updated.
+- **No icons.** Chrome's default action icon is used; drawing a real one is polish, not milestone work.
+
+**Manual check (needs Chrome 114+ and the backend running):** `npm run build`, then `chrome://extensions` → Developer mode → *Load unpacked* → `packages/extension/dist`. Open a watch page, click the toolbar icon: the panel shows the title, the id, and the ingest/embed counts, and follows navigation to another video without a reload. `npm run dev -w @yca/extension` rebuilds the bundles on change (static files are copied once at startup).
+
+**Known limits:** the panel follows the active tab of the last focused window, so two YouTube tabs share one panel view — normal for a side panel, revisit only if it bites. Watch mode does not re-copy `public/`.
+
+### M8 — Search UI ✅
 Search box, keyword/semantic toggle, results list (author, text, likes, date, score), loading/empty/error states. The panel drives ingest and embed steps by polling `/status` and calling the step endpoints until done, showing progress — including "semantic search covers X of Y comments so far".
 **Done when:** both modes return and render results inside the panel.
+**Verified:** against the running backend on `rfscVS0vtbw`. Keyword `"windows"` renders "Showing 10 of 10" with author, reply tag, age, likes and `ts_rank`; switching to Semantic re-runs `"people having problems installing the software"` and returns "Showing 20 of 200" led by installation complaints at 85% match; *Load more* appends the next page ("Showing 40 of 200"); a nonsense keyword query renders the empty state; *Resume indexing* drives ingest steps live (2,833 → 4,497 comments, the note and the coverage line updating per step) and *Stop* leaves "Stopped — progress is saved." with the status reloaded from the backend. No console errors. `npm test` (78 backend + 15 extension) and `npm run build` pass; `sidepanel.js` is 19.5kb.
+
+**Structure added** — `src/sidepanel/`: `indexing.ts` (the step driver), `results.ts` (one result element), `format.ts` (+ `.test.ts`, pure), `dom.ts` (shared builders). `api.ts` grew search and the two step calls.
+
+**Decisions taken here**
+
+- **Indexing is a button, not an autostart.** Opening the panel on an un-indexed video does not start fetching: ingestion spends YouTube quota against the user's key, and a panel that follows the active tab would otherwise start a run every time the user opened a video to look at it. The button reads "Index this video", "Resume indexing" or a disabled "Indexed" depending on the stored job.
+- **The panel is the loop, and the loop is interruptible.** `IndexingRun` calls `/ingest` until `done`, then `/embed` until `done`, checking a cancel flag between steps — the step in flight always lands, so nothing is wasted and nothing is half-written. Switching video, or pressing Stop, abandons the run; the durable state in `video_jobs` is what makes that safe.
+- **Ingest fully, then embed.** Interleaving would delay nothing that matters: keyword search is live from the first page, and `embedding IS NULL` picks up late arrivals in a later batch regardless of order.
+- **Progress is rendered from step responses, not from polling `/status`.** Each step already returns the counts, so a separate poll would add load and lag behind what the panel just learned. `/status` is re-read once, when a run ends.
+- **A separate, much longer timeout for step calls.** `REQUEST_TIMEOUT_MS` (8s) is right for a read and wrong for an embed batch measured at ~7s on the reference video, plus a cold model load; `STEP_TIMEOUT_MS` is 180s. The two calls otherwise share one `request()`.
+- **Semantic `total` is the candidate pool, and the panel says so.** The results header reads "Showing 20 of 200" and the coverage line reads "Semantic search covers X of Y comments so far", so a bounded pool over a partially embedded video is legible rather than mysterious.
+- **A superseded search is dropped, not rendered.** Each search carries an `AbortController`; a new query aborts the one in flight, and an abort raised by the panel itself is re-thrown rather than mapped to an `ApiError`, so a fast typist never sees a stale error.
+- **Backend error bodies are surfaced.** Nest puts the actionable text in the response body ("Query parameter \"q\" is required."), so `ApiError` reads it instead of showing a bare status line.
+- **The mode toggle is two real radios.** Hidden inputs with styled labels: keyboard and screen-reader behaviour is the browser's, and switching mode re-runs the current query — the same question asked the other way.
 
 ### M9 — Jump to comment
 Click a result → message the content script → expand the comments section, find the comment by ID (loading more if needed), scroll into view, highlight briefly. Graceful fallback when the comment cannot be reached.

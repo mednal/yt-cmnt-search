@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Comment AI",
+  "version": "0.1.0",
+  "description": "Search a YouTube video's comments by keyword or by meaning.",
+  "minimum_chrome_version": "114",
+  "permissions": ["sidePanel", "tabs", "storage"],
+  "host_permissions": ["__API_ORIGIN__/*"],
+  "action": {
+    "default_title": "Search this video's comments"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*", "https://m.youtube.com/*"],
+      "js": ["content-script.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

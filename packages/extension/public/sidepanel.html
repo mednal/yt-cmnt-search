@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>YouTube Comment AI</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <header class="header">
+      <h1 class="header__title">YouTube Comment AI</h1>
+      <span id="backend-badge" class="badge badge--pending">checking…</span>
+    </header>
+
+    <main class="main">
+      <section class="card">
+        <p id="video-state" class="card__state">Looking for a video…</p>
+        <div id="video-details" hidden>
+          <p id="video-title" class="video__title"></p>
+          <p class="video__id">ID <code id="video-id"></code></p>
+        </div>
+      </section>
+
+      <section id="status" class="card" hidden>
+        <div class="card__header">
+          <h2 class="card__title">Indexing status</h2>
+          <button id="refresh" type="button" class="button">Refresh</button>
+        </div>
+        <div id="status-body"></div>
+        <div class="actions">
+          <button id="index" type="button" class="button button--primary">Index this video</button>
+          <button id="stop" type="button" class="button" hidden>Stop</button>
+        </div>
+        <p id="index-note" class="note" hidden></p>
+      </section>
+
+      <section id="search" class="card" hidden>
+        <form id="search-form" class="search">
+          <input
+            id="query"
+            class="search__input"
+            type="search"
+            autocomplete="off"
+            placeholder="Search this video's comments…"
+            aria-label="Search this video's comments"
+          />
+          <div class="modes" role="radiogroup" aria-label="Search mode">
+            <label class="mode">
+              <input type="radio" name="mode" value="keyword" checked />
+              <span class="mode__label">Keyword</span>
+            </label>
+            <label class="mode">
+              <input type="radio" name="mode" value="semantic" />
+              <span class="mode__label">Semantic</span>
+            </label>
+            <button id="submit" type="submit" class="button button--primary">Search</button>
+          </div>
+        </form>
+        <p id="coverage" class="note" hidden></p>
+      </section>
+
+      <section id="results" class="card" hidden>
+        <div class="card__header">
+          <h2 id="results-title" class="card__title">Results</h2>
+        </div>
+        <div id="results-state"></div>
+        <ol id="results-list" class="results"></ol>
+        <div class="actions">
+          <button id="load-more" type="button" class="button" hidden>Load more</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      Keyword matches words; semantic matches meaning — try “people having problems installing”.
+    </footer>
+
+    <script src="sidepanel.js"></script>
+  </body>
+</html>
