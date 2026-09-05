@@ -11,13 +11,3 @@ export interface EmbedProgressRow {
   embedded: string;
   remaining: string;
 }
-
-/**
- * Formats a vector as a pgvector literal: `[0.1,0.2,...]`.
- *
- * Sent as text and cast with `::vector` in SQL, because the `pg` driver has
- * no native encoder for the extension's type.
- */
-export function toVectorLiteral(vector: number[]): string {
-  return `[${vector.join(',')}]`;
-}

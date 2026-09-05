@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import type { EmbedStepResponse } from '@yca/shared';
 
-import { DatabaseService } from '../database';
+import { DatabaseService, toVectorLiteral } from '../database';
 import {
   EMBEDDING_BATCH_SIZE,
   EMBEDDING_PROVIDER,
@@ -17,7 +17,6 @@ import {
 import type { EmbeddingProvider } from '../embedding';
 import type { VideoJobRow } from '../ingest';
 
-import { toVectorLiteral } from './embed.types';
 import type { EmbedProgressRow, PendingCommentRow } from './embed.types';
 
 /**

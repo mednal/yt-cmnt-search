@@ -1,7 +1,7 @@
 # YouTube Comment AI — Implementation Plan
 
-Status: **M0–M5 complete — M6 next**
-Last updated: 2026-09-02
+Status: **M0–M6 complete — M7 next**
+Last updated: 2026-09-05
 
 ---
 
@@ -123,9 +123,18 @@ NestJS app, `ConfigModule` reading env, `GET /health`. Jest wired up with one pa
 **Done when:** repeated embed calls drive `embedded_count` to `comment_count`; interrupting mid-run re-embeds nothing already done; the provider is injected by interface token, not concrete class.
 **Verified:** 2709 comments on `rfscVS0vtbw` embedded in 24 calls / 168s; a repeat call returns `done` in 0.14s without re-embedding anything.
 
-### M6 — Semantic search
+### M6 — Semantic search ✅
 Embed the query, `ORDER BY embedding <=> $1` (cosine), return similarity. `mode=semantic` on the same endpoint, skipping rows not yet embedded. IVFFlat index once row counts justify it.
 **Done when:** `"people complaining about installation"` surfaces `"Anyone else getting an error while installing this?"` on a real video.
+**Verified:** on `rfscVS0vtbw` (2709 embedded comments), `mode=semantic` returns ranked results in ~15ms of database time (~1.2s end to end, dominated by embedding the query). Meaning-based phrasings that share no words with the comments work: `"error installing"` returns *"When I wanted to install pycharm, it gives an error(451)"*, `"users struggling to install"` returns *"Hello, I'm struggling to install python and pycharm on Lenovo"*.
+**Known limit:** the exact wording in the criterion, `"people complaining about installation"`, does **not** surface installation complaints — it describes the commenters rather than the comment, and `gte-small` maps it near the corpus centroid, so the top hits are generic chatter. Measured against a 419-comment sample this is the phrasing, not the query path or the model's size: `bge-small-en-v1.5` (with its retrieval prefix) and `bge-base-en-v1.5` (768 dims, 3x the model) both miss it too, and return the same generic chatter. Phrasings that describe the *comment* — including CLAUDE.md's other example, `"people having problems installing the software"` — rank the right comments first. Options if this matters: swap to a retrieval-tuned model (`bge-small-en-v1.5` is also 384-dim, so no migration, but every comment needs re-embedding), or fuse keyword and semantic ranks. Neither is in M6.
+
+**Decisions taken here**
+
+- **Bounded candidate pool, not a similarity threshold.** Cosine distance is defined for every embedded comment, so semantic mode has no natural match set to count. It ranks the nearest `SEMANTIC_CANDIDATE_POOL` (200) comments and pages inside that; `total` is that pool. A fixed similarity cut-off was rejected: the value separating related from unrelated moves with the model and with the video.
+- **No ANN index yet.** Measured on the 2709-comment video, the exact scan is 14ms — Postgres filters by `video_id` with the btree index and top-N sorts the rest. An IVFFlat/HNSW index is approximate and, combined with a per-video filter, would trade recall for nothing at this size. The query is written as `ORDER BY embedding <=> $2 LIMIT pool` in a single subquery, which is the shape such an index needs, so adding one later is a migration and no code change. Revisit past ~100k rows per video, or when search spans videos.
+- **Query preparation matches the write side.** The query is trimmed and capped at `MAX_EMBEDDING_INPUT_CHARS` exactly as comments were, so both sides of the comparison went through the same pipeline. A provider failure maps to 502, as in the embed pipeline: an upstream dependency failed, not a bad request.
+- **`toVectorLiteral` moved to the database layer.** Both the write side (embedding pipeline) and the read side (semantic search) need pgvector's text literal encoding, and it belongs to neither.
 
 ### M7 — Extension shell
 MV3 `manifest.json`, service worker opening the side panel on action click, content script detecting the video ID (including SPA navigation via `yt-navigate-finish`), panel showing the detected video and its job status. esbuild build script.
