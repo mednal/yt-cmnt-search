@@ -2,13 +2,20 @@
   "name": "@yca/extension",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "description": "Chrome MV3 side panel for searching the current video's comments.",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --watch",
+    "test": "node --test \"src/**/*.test.ts\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
     "@yca/shared": "*"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.300",
+    "esbuild": "^0.25.0"
   }
 }

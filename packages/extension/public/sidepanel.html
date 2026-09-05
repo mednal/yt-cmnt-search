@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>YouTube Comment AI</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <header class="header">
+      <h1 class="header__title">YouTube Comment AI</h1>
+      <span id="backend-badge" class="badge badge--pending">checking…</span>
+    </header>
+
+    <main class="main">
+      <section class="card">
+        <p id="video-state" class="card__state">Looking for a video…</p>
+        <div id="video-details" hidden>
+          <p id="video-title" class="video__title"></p>
+          <p class="video__id">ID <code id="video-id"></code></p>
+        </div>
+      </section>
+
+      <section id="status" class="card" hidden>
+        <div class="card__header">
+          <h2 class="card__title">Indexing status</h2>
+          <button id="refresh" type="button" class="button">Refresh</button>
+        </div>
+        <div id="status-body"></div>
+      </section>
+    </main>
+
+    <footer class="footer">Search arrives in M8.</footer>
+
+    <script src="sidepanel.js"></script>
+  </body>
+</html>
