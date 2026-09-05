@@ -1,6 +1,6 @@
 # YouTube Comment AI — Implementation Plan
 
-Status: **M0–M4 complete — M5 next**
+Status: **M0–M5 complete — M6 next**
 Last updated: 2026-09-02
 
 ---
@@ -11,8 +11,8 @@ These are decided. They are not re-opened during implementation.
 
 | # | Area | Decision |
 |---|------|----------|
-| 1 | Embeddings | OpenAI `text-embedding-3-small` (1536 dims) |
-| 2 | Provider abstraction | `EmbeddingProvider` interface; OpenAI is one implementation, swappable later |
+| 1 | Embeddings | Local ONNX `Xenova/gte-small` (384 dims) run in-process by Transformers.js — no API key, no quota, no per-comment cost. *(Revised at M5: was OpenAI `text-embedding-3-small`.)* |
+| 2 | Provider abstraction | `EmbeddingProvider` interface; the local model is the bound implementation, `OpenAIEmbeddingProvider` is kept as the paid upgrade path |
 | 3 | Database | PostgreSQL + `pgvector`, accessed with the plain `pg` driver and raw SQL — no ORM |
 | 4 | Backend | NestJS (Node.js, TypeScript) |
 | 5 | Extension | Chrome Manifest V3 + Side Panel API |
@@ -26,7 +26,8 @@ These are decided. They are not re-opened during implementation.
 
 - **Migrations:** numbered plain-SQL files run by a small migration runner. Schema drift stays visible in git.
 - **Comment source:** YouTube Data API v3 `commentThreads.list`. Official, keyed, quota-bounded. No scraping.
-- **Embedding batching:** up to 96 comments per OpenAI request, written to the DB after each batch so a failure never loses completed work.
+- **Embedding batching:** 96 comments per batch, written to the DB after each one so a failure never loses completed work. Batches are selected in text-length order, because the model pads every text in a batch to the longest in it — mixing one 5000-character comment in with 95 short ones measured ~150x slower than grouping by length.
+- **Embedding runs where the data is:** in the backend, never in the extension. An MV3 service worker is killed between events and would recompute per user what the server already stores.
 - **Extension build:** `esbuild` only. One dependency, no bundler config.
 
 ---
@@ -87,7 +88,9 @@ YouTube tab
   -> click result -> content script scrolls to + highlights that comment
 ```
 
-`comments` table: `id`, `youtube_comment_id` (unique), `video_id`, `author`, `author_channel_id`, `text`, `like_count`, `published_at`, `updated_at`, `parent_comment_id`, `embedding vector(1536) NULL`.
+`comments` table: `id`, `youtube_comment_id` (unique), `video_id`, `author`, `author_channel_id`, `text`, `like_count`, `published_at`, `updated_at`, `parent_comment_id`, `embedding vector(384) NULL`.
+
+Vector width is part of the column type, so the model and the schema move together: changing embedding provider always needs a migration (002 narrowed 1536 → 384). `EmbeddingModule` refuses to boot when the bound provider's `dimensions` disagree with the schema.
 
 ---
 
@@ -115,9 +118,10 @@ NestJS app, `ConfigModule` reading env, `GET /health`. Jest wired up with one pa
 `GET /videos/:videoId/search?q=&mode=keyword`. Postgres full-text (`tsquery`) with `ts_rank`, paginated. Response shape defined in `shared`.
 **Done when:** searching `"windows"` returns ranked comments containing it, with tests.
 
-### M5 — Resumable embedding pipeline
-`EmbeddingProvider` interface (`embed(texts: string[]): Promise<number[][]>`, `dimensions`, `model`). `OpenAIEmbeddingProvider` against `text-embedding-3-small`, batched, retried on 429/5xx. `EmbedService` doing one bounded batch per call, driven by `embedding IS NULL`. `POST /videos/:videoId/embed`.
+### M5 — Resumable embedding pipeline ✅
+`EmbeddingProvider` interface (`embed(texts: string[]): Promise<number[][]>`, `dimensions`, `model`). `LocalEmbeddingProvider` running `Xenova/gte-small` in-process, lazily loaded, batched; `OpenAIEmbeddingProvider` (batched, retried on 429/5xx) kept behind the same token. `EmbedService` doing one bounded batch per call, driven by `embedding IS NULL`. `POST /videos/:videoId/embed`. Migration 002 narrows the vector column to 384.
 **Done when:** repeated embed calls drive `embedded_count` to `comment_count`; interrupting mid-run re-embeds nothing already done; the provider is injected by interface token, not concrete class.
+**Verified:** 2709 comments on `rfscVS0vtbw` embedded in 24 calls / 168s; a repeat call returns `done` in 0.14s without re-embedding anything.
 
 ### M6 — Semantic search
 Embed the query, `ORDER BY embedding <=> $1` (cosine), return similarity. `mode=semantic` on the same endpoint, skipping rows not yet embedded. IVFFlat index once row counts justify it.

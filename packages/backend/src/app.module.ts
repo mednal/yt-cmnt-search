@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 import { DatabaseModule } from './database';
+import { EmbedModule } from './embed';
 import { HealthModule } from './health/health.module';
 import { IngestModule } from './ingest';
 import { SearchModule } from './search';
@@ -16,6 +17,7 @@ import { SearchModule } from './search';
     DatabaseModule,
     HealthModule,
     IngestModule,
+    EmbedModule,
     SearchModule,
   ],
 })
