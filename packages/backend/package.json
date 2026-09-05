@@ -13,6 +13,7 @@
     "migrate": "node --env-file-if-exists=../../.env dist/migrate.js"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.2.0",
     "@nestjs/common": "^11.2.3",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.2.3",

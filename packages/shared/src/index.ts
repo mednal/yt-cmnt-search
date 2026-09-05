@@ -2,7 +2,7 @@
  * Types shared by the backend and the extension.
  *
  * These are the API request/response contracts (M3: ingestion status;
- * M4: search).
+ * M4: search; M5: embedding).
  */
 
 /** Lifecycle of one asynchronous, resumable job step (ingest or embed). */
@@ -25,6 +25,17 @@ export interface IngestStepResponse {
   state: JobState;
   commentCount: number;
   /** `true` once every comment page has been fetched. */
+  done: boolean;
+}
+
+/** `POST /videos/:videoId/embed` — result of one bounded embedding batch. */
+export interface EmbedStepResponse {
+  state: JobState;
+  /** Comments of this video that now have a vector. */
+  embeddedCount: number;
+  /** Comments still waiting for one, after this batch. */
+  remaining: number;
+  /** `true` once every stored comment is embedded. */
   done: boolean;
 }
 

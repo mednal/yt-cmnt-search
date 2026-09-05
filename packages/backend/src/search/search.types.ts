@@ -4,6 +4,24 @@ import type { SearchMode, SearchResultItem } from '@yca/shared';
 export const DEFAULT_LIMIT = 20;
 export const MAX_LIMIT = 100;
 
+/**
+ * How many nearest comments semantic mode ranks before paging.
+ *
+ * Cosine distance is defined for *every* embedded comment, so unlike keyword
+ * mode there is no natural set of "matches" to count: a video with 2700
+ * embedded comments would otherwise report 2700 results, almost all of them
+ * unrelated. Semantic mode therefore answers a bounded question — the best
+ * `SEMANTIC_CANDIDATE_POOL` comments — and pages within that. `total` is the
+ * size of that pool, so paging past it is the end of the results, not a gap.
+ *
+ * An absolute similarity cut-off was the alternative and was rejected: the
+ * threshold that separates related from unrelated moves with the model and
+ * with how chatty a video's comments are, so it would need re-tuning to stay
+ * meaningful. A fixed pool degrades gracefully instead — the ranking is still
+ * right, the tail is just weaker.
+ */
+export const SEMANTIC_CANDIDATE_POOL = 200;
+
 /** A validated search request, as handed to `SearchService`. */
 export interface SearchQuery {
   videoId: string;
