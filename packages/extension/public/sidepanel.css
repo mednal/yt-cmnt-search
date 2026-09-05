@@ -195,6 +195,164 @@ code {
   cursor: default;
 }
 
+.button--primary {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.actions:empty {
+  display: none;
+}
+
+/* --- search ------------------------------------------------------------ */
+
+.search {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.search__input {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.search__input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.search__input:disabled {
+  opacity: 0.5;
+}
+
+.modes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* A segmented control built from real radios: the radio itself is hidden,
+   its label is the button, so keyboard and screen-reader behaviour is the
+   browser's rather than something re-implemented in script. */
+.mode__label {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mode input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mode input:checked + .mode__label {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.mode input:focus-visible + .mode__label {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.modes .button {
+  margin-left: auto;
+}
+
+/* --- results ------------------------------------------------------------ */
+
+.results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.results:empty {
+  display: none;
+}
+
+.result {
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+.result__head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.result__author {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.result__age {
+  margin-left: auto;
+  flex: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.tag {
+  flex: none;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.result__text {
+  /* Comments run to thousands of characters; a long one scrolls inside its
+     own card instead of burying the results below it. */
+  margin: 0;
+  max-height: 12em;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.result__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.result__score {
+  font-variant-numeric: tabular-nums;
+}
+
 .footer {
   padding: 0 14px 14px;
   color: var(--muted);

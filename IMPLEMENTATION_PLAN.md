@@ -1,6 +1,6 @@
 # YouTube Comment AI — Implementation Plan
 
-Status: **M0–M7 complete — M8 next**
+Status: **M0–M8 complete — M9 next**
 Last updated: 2026-09-05
 
 ---
@@ -169,9 +169,24 @@ packages/extension/
 
 **Known limits:** the panel follows the active tab of the last focused window, so two YouTube tabs share one panel view — normal for a side panel, revisit only if it bites. Watch mode does not re-copy `public/`.
 
-### M8 — Search UI
+### M8 — Search UI ✅
 Search box, keyword/semantic toggle, results list (author, text, likes, date, score), loading/empty/error states. The panel drives ingest and embed steps by polling `/status` and calling the step endpoints until done, showing progress — including "semantic search covers X of Y comments so far".
 **Done when:** both modes return and render results inside the panel.
+**Verified:** against the running backend on `rfscVS0vtbw`. Keyword `"windows"` renders "Showing 10 of 10" with author, reply tag, age, likes and `ts_rank`; switching to Semantic re-runs `"people having problems installing the software"` and returns "Showing 20 of 200" led by installation complaints at 85% match; *Load more* appends the next page ("Showing 40 of 200"); a nonsense keyword query renders the empty state; *Resume indexing* drives ingest steps live (2,833 → 4,497 comments, the note and the coverage line updating per step) and *Stop* leaves "Stopped — progress is saved." with the status reloaded from the backend. No console errors. `npm test` (78 backend + 15 extension) and `npm run build` pass; `sidepanel.js` is 19.5kb.
+
+**Structure added** — `src/sidepanel/`: `indexing.ts` (the step driver), `results.ts` (one result element), `format.ts` (+ `.test.ts`, pure), `dom.ts` (shared builders). `api.ts` grew search and the two step calls.
+
+**Decisions taken here**
+
+- **Indexing is a button, not an autostart.** Opening the panel on an un-indexed video does not start fetching: ingestion spends YouTube quota against the user's key, and a panel that follows the active tab would otherwise start a run every time the user opened a video to look at it. The button reads "Index this video", "Resume indexing" or a disabled "Indexed" depending on the stored job.
+- **The panel is the loop, and the loop is interruptible.** `IndexingRun` calls `/ingest` until `done`, then `/embed` until `done`, checking a cancel flag between steps — the step in flight always lands, so nothing is wasted and nothing is half-written. Switching video, or pressing Stop, abandons the run; the durable state in `video_jobs` is what makes that safe.
+- **Ingest fully, then embed.** Interleaving would delay nothing that matters: keyword search is live from the first page, and `embedding IS NULL` picks up late arrivals in a later batch regardless of order.
+- **Progress is rendered from step responses, not from polling `/status`.** Each step already returns the counts, so a separate poll would add load and lag behind what the panel just learned. `/status` is re-read once, when a run ends.
+- **A separate, much longer timeout for step calls.** `REQUEST_TIMEOUT_MS` (8s) is right for a read and wrong for an embed batch measured at ~7s on the reference video, plus a cold model load; `STEP_TIMEOUT_MS` is 180s. The two calls otherwise share one `request()`.
+- **Semantic `total` is the candidate pool, and the panel says so.** The results header reads "Showing 20 of 200" and the coverage line reads "Semantic search covers X of Y comments so far", so a bounded pool over a partially embedded video is legible rather than mysterious.
+- **A superseded search is dropped, not rendered.** Each search carries an `AbortController`; a new query aborts the one in flight, and an abort raised by the panel itself is re-thrown rather than mapped to an `ApiError`, so a fast typist never sees a stale error.
+- **Backend error bodies are surfaced.** Nest puts the actionable text in the response body ("Query parameter \"q\" is required."), so `ApiError` reads it instead of showing a bare status line.
+- **The mode toggle is two real radios.** Hidden inputs with styled labels: keyboard and screen-reader behaviour is the browser's, and switching mode re-runs the current query — the same question asked the other way.
 
 ### M9 — Jump to comment
 Click a result → message the content script → expand the comments section, find the comment by ID (loading more if needed), scroll into view, highlight briefly. Graceful fallback when the comment cannot be reached.
